@@ -1,6 +1,12 @@
 from rest_framework import serializers
 
-from railway.models import Station, Journey, Route, Crew, Train
+from railway.models import (
+    Station,
+    Journey,
+    Route,
+    Crew,
+    Train
+)
 
 
 class StationSerializer(serializers.ModelSerializer):
@@ -56,7 +62,14 @@ class TrainSerializer(serializers.ModelSerializer):
 
 class JourneySerializer(serializers.ModelSerializer):
     route = RouteSerializer(many=False, read_only=False)
-    train = TrainSerializer(many=False, read_only=False)
+    train = serializers.SlugRelatedField(
+        many=False,
+        read_only=False,
+        slug_field="name",
+        queryset=Train.objects.all()
+    )
+
+    # train = TrainSerializer(many=False, read_only=False)
     # crew - implement writable nested serializer for POST, PUT, PATCH
 
     class Meta:
@@ -66,18 +79,26 @@ class JourneySerializer(serializers.ModelSerializer):
         )
 
 
-class JourneyListSerializer(JourneySerializer):
-    route = RouteSerializer(many=False, read_only=True)
-    train = TrainSerializer(many=False, read_only=True)
-
-
-class JourneyRetrieveSerializer(JourneySerializer):
+class JourneyListSerializer(serializers.ModelSerializer):
     route = RouteListSerializer(many=False, read_only=True)
-    train = TrainSerializer(
-        many=False, read_only=True
-    )
+    train = serializers.SlugRelatedField(many=False, read_only=True, slug_field="name")
+    available_tickets = serializers.IntegerField()
+
+    class Meta:
+        model = Journey
+        fields = (
+            "id",
+            "route",
+            "train",
+            "departure_time",
+            "arrival_time",
+            "available_tickets"
+        )
+
+
+class JourneyRetrieveSerializer(JourneyListSerializer):
     crew = CrewJourneySerializer(many=True, read_only=True)
 
     class Meta:
         model = Journey
-        fields = JourneySerializer.Meta.fields + ("crew",)
+        fields = JourneyListSerializer.Meta.fields + ("crew",)

@@ -1,10 +1,16 @@
-from rest_framework import viewsets, generics, mixins
-from rest_framework.generics import GenericAPIView
-from rest_framework.viewsets import GenericViewSet
+from django.db.models import F, Count
+from rest_framework import viewsets
 
-from railway.models import Station, Journey
-from railway.serializers import StationSerializer, JourneySerializer, \
-    JourneyListSerializer, JourneyRetrieveSerializer
+from railway.models import (
+    Station,
+    Journey
+)
+from railway.serializers import (
+    StationSerializer,
+    JourneySerializer,
+    JourneyListSerializer,
+    JourneyRetrieveSerializer
+)
 
 
 # Create your views here.
@@ -18,14 +24,19 @@ class JourneyViewSet(viewsets.ModelViewSet):
     serializer_class = JourneySerializer
 
     def get_queryset(self):
-        queryset = self.queryset
+        queryset = self.queryset.select_related(
+            "train",
+            "train__train_type",
+            "route",
+            "route__source",
+            "route__destination"
+        ).prefetch_related("crew")
         if self.action in ("list", "retrieve"):
-            queryset = queryset.select_related(
-                "route",
-                "route__source",
-                "route__destination",
-                "train",
-                "train__train_type"
+            queryset = queryset.prefetch_related("tickets").annotate(
+                available_tickets=(
+                    F("train__cargo_num") * F("train__places_in_cargo")
+                    - Count("tickets")
+                )
             )
         return queryset
 
