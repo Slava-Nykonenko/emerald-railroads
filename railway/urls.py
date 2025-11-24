@@ -18,10 +18,11 @@ Including another URLconf
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from railway.views import StationViewSet
+from railway.views import StationViewSet, JourneyViewSet
 
 router = DefaultRouter()
 router.register("stations", StationViewSet)
+router.register("journeys", JourneyViewSet)
 
 urlpatterns = [
     path("", include(router.urls)),

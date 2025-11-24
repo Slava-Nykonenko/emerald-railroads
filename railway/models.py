@@ -58,7 +58,7 @@ class Route(models.Model):
 
     def __str__(self):
         return (f"{self.source.name} -> {self.destination.name} "
-                f"({self.distance})")
+                f"({self.distance} km)")
 
 
 class Order(models.Model):
