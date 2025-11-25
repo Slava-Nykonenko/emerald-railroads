@@ -32,6 +32,7 @@ class RouteListSerializer(RouteSerializer):
         many=False,
         read_only=True,
     )
+
     class Meta:
         model = Route
         fields = ("source", "destination")
@@ -55,22 +56,26 @@ class TrainSerializer(serializers.ModelSerializer):
         many=False,
         read_only=True,
     )
+
     class Meta:
         model = Train
         fields = ("name", "train_type")
 
 
 class JourneySerializer(serializers.ModelSerializer):
-    route = RouteSerializer(many=False, read_only=False)
+    route = serializers.PrimaryKeyRelatedField(
+        many=False,
+        read_only=False,
+        queryset=Route.objects.all().select_related(
+            "destination", "source"
+        )
+    )
     train = serializers.SlugRelatedField(
         many=False,
         read_only=False,
         slug_field="name",
-        queryset=Train.objects.all()
+        queryset=Train.objects.all().select_related("train_type")
     )
-
-    # train = TrainSerializer(many=False, read_only=False)
-    # crew - implement writable nested serializer for POST, PUT, PATCH
 
     class Meta:
         model = Journey
@@ -80,8 +85,10 @@ class JourneySerializer(serializers.ModelSerializer):
 
 
 class JourneyListSerializer(serializers.ModelSerializer):
-    route = RouteListSerializer(many=False, read_only=True)
-    train = serializers.SlugRelatedField(many=False, read_only=True, slug_field="name")
+    route = serializers.StringRelatedField(many=False, read_only=False)
+    train = serializers.SlugRelatedField(
+        many=False, read_only=True, slug_field="name"
+    )
     available_tickets = serializers.IntegerField()
 
     class Meta:
@@ -97,7 +104,7 @@ class JourneyListSerializer(serializers.ModelSerializer):
 
 
 class JourneyRetrieveSerializer(JourneyListSerializer):
-    crew = CrewJourneySerializer(many=True, read_only=True)
+    crew = serializers.StringRelatedField(many=True, read_only=True)
 
     class Meta:
         model = Journey

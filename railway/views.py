@@ -1,5 +1,7 @@
 from django.db.models import F, Count
-from rest_framework import viewsets
+from rest_framework import viewsets, mixins
+from rest_framework.generics import GenericAPIView
+from rest_framework.viewsets import GenericViewSet
 
 from railway.models import (
     Station,
@@ -25,14 +27,12 @@ class JourneyViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = self.queryset.select_related(
-            "train",
             "train__train_type",
-            "route",
+            "route__destination",
             "route__source",
-            "route__destination"
         ).prefetch_related("crew")
         if self.action in ("list", "retrieve"):
-            queryset = queryset.prefetch_related("tickets").annotate(
+            queryset = queryset.annotate(
                 available_tickets=(
                     F("train__cargo_num") * F("train__places_in_cargo")
                     - Count("tickets")
