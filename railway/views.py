@@ -5,7 +5,10 @@ from rest_framework import viewsets
 
 from railway.models import (
     Station,
-    Journey, Route, Order, Train
+    Journey,
+    Route,
+    Order,
+    Train
 )
 from railway.serializers import (
     StationSerializer,
@@ -16,7 +19,8 @@ from railway.serializers import (
     RouteListSerializer,
     OrderSerializer,
     OrderListSerializer,
-    TrainSerializer, TrainListSerializer
+    TrainSerializer,
+    TrainListSerializer
 )
 
 

@@ -6,7 +6,9 @@ from railway.models import (
     Journey,
     Route,
     Crew,
-    Train, Order, Ticket
+    Train,
+    Order,
+    Ticket
 )
 
 
@@ -142,4 +144,3 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class OrderListSerializer(OrderSerializer):
     tickets = TicketListSerializer(many=True, read_only=True)
-

@@ -133,7 +133,8 @@ class Ticket(models.Model):
         if not (1 <= seat <= places_in_cargo):
             raise error_to_raise(
                 {
-                    "seat": f"seat must be in the range [1, {places_in_cargo}]",
+                    "seat":
+                        f"seat must be in the range [1, {places_in_cargo}]",
                 }
             )
         elif not (1 <= cargo <= cargo_num):

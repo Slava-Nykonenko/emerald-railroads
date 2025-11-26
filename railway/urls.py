@@ -18,8 +18,13 @@ Including another URLconf
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from railway.views import StationViewSet, JourneyViewSet, RouteViewSet, \
-    OrderViewSet, TrainViewSet
+from railway.views import (
+    StationViewSet,
+    JourneyViewSet,
+    RouteViewSet,
+    OrderViewSet,
+    TrainViewSet
+)
 
 router = DefaultRouter()
 router.register("stations", StationViewSet)
