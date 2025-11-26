@@ -24,7 +24,7 @@ from railway.serializers import (
     TrainSerializer,
     TrainListSerializer,
     StationListSerializer,
-    StationRetrieveSerializer
+    StationRetrieveSerializer, TrainRetrieveSerializer
 )
 
 
@@ -134,8 +134,10 @@ class TrainViewSet(viewsets.ModelViewSet):
     serializer_class = TrainSerializer
 
     def get_serializer_class(self):
-        if self.action in ("list", "retrieve"):
+        if self.action == "list":
             return TrainListSerializer
+        elif self.action == "retrieve":
+            return TrainRetrieveSerializer
         return TrainSerializer
 
     def get_queryset(self):
