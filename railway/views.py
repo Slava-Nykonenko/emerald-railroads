@@ -1,6 +1,8 @@
 from datetime import datetime
 
 from django.db.models import F, Count
+from django.utils import timezone
+from django.utils.dateparse import parse_date
 from rest_framework import viewsets
 
 from railway.models import (
@@ -42,6 +44,9 @@ class JourneyViewSet(viewsets.ModelViewSet):
             "route__destination",
             "route__source"
         ).prefetch_related("crew")
+        source = self.request.query_params.get("source", None)
+        destination = self.request.query_params.get("destination", None)
+        date = self.request.query_params.get("date", None)
         if self.action in ("list", "retrieve"):
             queryset = queryset.annotate(
                 available_tickets=(
@@ -51,6 +56,19 @@ class JourneyViewSet(viewsets.ModelViewSet):
             )
         if self.action == "list":
             queryset = queryset.filter(departure_time__gte=datetime.now())
+        if source:
+            queryset = queryset.filter(
+                route__source__name__icontains=source
+            )
+        if destination:
+            queryset = queryset.filter(
+                route__destination__name__icontains=destination
+            )
+        if date:
+            aware_date = timezone.make_aware(
+                datetime.combine(parse_date(date), datetime.min.time())
+            )
+            queryset = queryset.filter(departure_time__gte=aware_date)
 
         return queryset.order_by("departure_time")
 
