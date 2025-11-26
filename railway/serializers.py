@@ -101,6 +101,17 @@ class JourneyRetrieveSerializer(JourneyListSerializer):
 
 
 class TicketSerializer(serializers.ModelSerializer):
+    def validate(self, attrs):
+        data = super(TicketSerializer, self).validate(attrs)
+        Ticket.validate_seat(
+            attrs["seat"],
+            attrs["cargo"],
+            attrs["journey"].train.places_in_cargo,
+            attrs["journey"].train.cargo_num,
+            serializers.ValidationError
+        )
+        return data
+
     class Meta:
         model = Ticket
         fields = ("cargo", "seat", "journey")

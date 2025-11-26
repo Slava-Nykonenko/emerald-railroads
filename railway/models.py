@@ -1,4 +1,5 @@
 from django.db import models
+from rest_framework.exceptions import ValidationError
 
 from railroads import settings
 
@@ -118,6 +119,50 @@ class Ticket(models.Model):
     class Meta:
         unique_together = ("cargo", "seat", "journey")
 
-
     def __str__(self):
         return f"{self.journey.train.name} ({self.seat})"
+
+    @staticmethod
+    def validate_seat(
+            seat: int,
+            cargo: int,
+            places_in_cargo: int,
+            cargo_num: int,
+            error_to_raise
+    ):
+        if not (1 <= seat <= places_in_cargo):
+            raise error_to_raise(
+                {
+                    "seat": f"seat must be in the range [1, {places_in_cargo}]",
+                }
+            )
+        elif not (1 <= cargo <= cargo_num):
+            raise error_to_raise(
+                {
+                    "cargo": f"cargo must be in the range [1, {cargo_num}]",
+                }
+            )
+
+    def clean(self):
+        Ticket.validate_seat(
+            self.seat,
+            self.cargo,
+            self.journey.train.places_in_cargo,
+            self.journey.train.cargo_num,
+            ValidationError
+        )
+
+    def save(
+        self,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        self.clean()
+        return super(Ticket, self).save(
+            force_insert=force_insert,
+            force_update=force_update,
+            using=using,
+            update_fields=update_fields,
+        )
