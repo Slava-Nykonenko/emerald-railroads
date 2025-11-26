@@ -18,7 +18,10 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
+from user.views import LoginUserView
+
 urlpatterns = [
+    path("login/", LoginUserView.as_view(), name="token"),
 ]
 
 app_name = "user"

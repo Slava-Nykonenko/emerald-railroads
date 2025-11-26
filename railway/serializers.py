@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers
 
 from railway.models import (
@@ -5,7 +6,7 @@ from railway.models import (
     Journey,
     Route,
     Crew,
-    Train
+    Train, Order, Ticket
 )
 
 
@@ -27,15 +28,10 @@ class RouteListSerializer(RouteSerializer):
         many=False,
         read_only=True,
     )
-    destination = serializers.SlugRelatedField(
-        slug_field="name",
+    destination = serializers.PrimaryKeyRelatedField(
         many=False,
         read_only=True,
     )
-
-    class Meta:
-        model = Route
-        fields = ("source", "destination")
 
 
 class CrewSerializer(serializers.ModelSerializer):
@@ -63,18 +59,11 @@ class TrainSerializer(serializers.ModelSerializer):
 
 
 class JourneySerializer(serializers.ModelSerializer):
+    # train = serializers.SlugRelatedField(many=False, read_only=False, slug_field="name", queryset=Train.objects.prefetch_related("train_type"))
     route = serializers.PrimaryKeyRelatedField(
         many=False,
+        queryset=Route.objects.select_related("source", "destination"),
         read_only=False,
-        queryset=Route.objects.all().select_related(
-            "destination", "source"
-        )
-    )
-    train = serializers.SlugRelatedField(
-        many=False,
-        read_only=False,
-        slug_field="name",
-        queryset=Train.objects.all().select_related("train_type")
     )
 
     class Meta:
@@ -109,3 +98,37 @@ class JourneyRetrieveSerializer(JourneyListSerializer):
     class Meta:
         model = Journey
         fields = JourneyListSerializer.Meta.fields + ("crew",)
+
+
+class TicketSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ticket
+        fields = ("cargo", "seat", "journey")
+
+
+class TicketListSerializer(TicketSerializer):
+    journey = serializers.StringRelatedField(
+        many=False,
+        read_only=True,
+        source="journey.route",
+    )
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    tickets = TicketSerializer(many=True, read_only=False)
+
+    class Meta:
+        model = Order
+        fields = ("id", "created_at", "tickets")
+
+    def create(self, validated_data):
+        with transaction.atomic():
+            tickets_data = validated_data.pop("tickets")
+            order = Order.objects.create(**validated_data)
+            for ticket_data in tickets_data:
+                Ticket.objects.create(order=order, **ticket_data)
+            return order
+
+
+class OrderListSerializer(OrderSerializer):
+    tickets = TicketListSerializer(many=True, read_only=True)

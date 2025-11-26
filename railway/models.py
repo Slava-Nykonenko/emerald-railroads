@@ -56,6 +56,11 @@ class Route(models.Model):
     )
     distance = models.IntegerField()
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["source", "destination"])
+        ]
+
     def __str__(self):
         return (f"{self.source.name} -> {self.destination.name} "
                 f"({self.distance} km)")
@@ -68,6 +73,9 @@ class Order(models.Model):
         on_delete=models.CASCADE,
         related_name="orders"
     )
+
+    class Meta:
+        ordering = ["-created_at"]
 
 
 class Journey(models.Model):
@@ -84,6 +92,10 @@ class Journey(models.Model):
     departure_time = models.DateTimeField()
     arrival_time = models.DateTimeField()
     crew = models.ManyToManyField(Crew, blank=True)
+
+    class Meta:
+        ordering = ("departure_time",)
+        indexes = [models.Index(fields=["departure_time"])]
 
     def __str__(self):
         return f"{self.route.source.name} -> {self.route.destination.name}"
