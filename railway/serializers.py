@@ -47,19 +47,18 @@ class CrewJourneySerializer(CrewSerializer):
 
 
 class TrainSerializer(serializers.ModelSerializer):
-    train_type = serializers.SlugRelatedField(
-        slug_field="name",
-        many=False,
-        read_only=True,
-    )
-
     class Meta:
         model = Train
-        fields = ("name", "train_type")
+        fields = ("id", "name", "train_type")
+
+
+class TrainListSerializer(TrainSerializer):
+    train_type = serializers.SlugRelatedField(
+        many=False, read_only=True, slug_field="name"
+    )
 
 
 class JourneySerializer(serializers.ModelSerializer):
-    # train = serializers.SlugRelatedField(many=False, read_only=False, slug_field="name", queryset=Train.objects.prefetch_related("train_type"))
     route = serializers.PrimaryKeyRelatedField(
         many=False,
         queryset=Route.objects.select_related("source", "destination"),
@@ -143,3 +142,4 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class OrderListSerializer(OrderSerializer):
     tickets = TicketListSerializer(many=True, read_only=True)
+

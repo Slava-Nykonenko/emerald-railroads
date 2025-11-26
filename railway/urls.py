@@ -19,14 +19,14 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
 from railway.views import StationViewSet, JourneyViewSet, RouteViewSet, \
-    OrderViewSet
+    OrderViewSet, TrainViewSet
 
 router = DefaultRouter()
 router.register("stations", StationViewSet)
-router.register("journeys", JourneyViewSet)
+router.register("trains", TrainViewSet)
 router.register("routes", RouteViewSet)
+router.register("journeys", JourneyViewSet)
 router.register("orders", OrderViewSet)
-
 
 urlpatterns = [
     path("", include(router.urls)),

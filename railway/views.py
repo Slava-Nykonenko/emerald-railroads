@@ -1,19 +1,22 @@
 from datetime import datetime
 
 from django.db.models import F, Count
-from rest_framework import viewsets, mixins
-from rest_framework.viewsets import GenericViewSet
+from rest_framework import viewsets
 
 from railway.models import (
     Station,
-    Journey, Route, Order
+    Journey, Route, Order, Train
 )
 from railway.serializers import (
     StationSerializer,
     JourneySerializer,
     JourneyListSerializer,
-    JourneyRetrieveSerializer, RouteSerializer, RouteListSerializer,
-    OrderSerializer, OrderListSerializer
+    JourneyRetrieveSerializer,
+    RouteSerializer,
+    RouteListSerializer,
+    OrderSerializer,
+    OrderListSerializer,
+    TrainSerializer, TrainListSerializer
 )
 
 
@@ -23,14 +26,7 @@ class StationViewSet(viewsets.ModelViewSet):
     serializer_class = StationSerializer
 
 
-class JourneyViewSet(
-    # mixins.ListModelMixin,
-    # mixins.RetrieveModelMixin,
-    mixins.UpdateModelMixin,
-    mixins.CreateModelMixin,
-    GenericViewSet
-    # viewsets.ModelViewSet
-):
+class JourneyViewSet(viewsets.ModelViewSet):
     queryset = Journey.objects.all()
     serializer_class = JourneySerializer
     ordering_fields = ('departure_time',)
@@ -98,3 +94,19 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+class TrainViewSet(viewsets.ModelViewSet):
+    queryset = Train.objects.all()
+    serializer_class = TrainSerializer
+
+    def get_serializer_class(self):
+        if self.action in ("list", "retrieve"):
+            return TrainListSerializer
+        return TrainSerializer
+
+    def get_queryset(self):
+        queryset = self.queryset
+        if self.action in ("list", "retrieve"):
+            queryset = queryset.select_related("train_type")
+        return queryset
