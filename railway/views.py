@@ -3,7 +3,10 @@ from datetime import datetime
 from django.db.models import F, Count
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from railway.models import (
     Station,
@@ -25,7 +28,8 @@ from railway.serializers import (
     TrainListSerializer,
     StationListSerializer,
     StationRetrieveSerializer,
-    TrainRetrieveSerializer
+    TrainRetrieveSerializer,
+    TrainImageSerializer
 )
 
 
@@ -45,7 +49,7 @@ class StationViewSet(viewsets.ModelViewSet):
 class JourneyViewSet(viewsets.ModelViewSet):
     queryset = Journey.objects.all()
     serializer_class = JourneySerializer
-    ordering_fields = ('departure_time',)
+    ordering_fields = ("departure_time",)
 
     def get_queryset(self):
         queryset = self.queryset.select_related(
@@ -109,6 +113,7 @@ class RouteViewSet(viewsets.ModelViewSet):
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
+    permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
         queryset = self.queryset.filter(user=self.request.user)
@@ -139,6 +144,8 @@ class TrainViewSet(viewsets.ModelViewSet):
             return TrainListSerializer
         elif self.action == "retrieve":
             return TrainRetrieveSerializer
+        elif self.action == "upload_image":
+            return TrainImageSerializer
         return TrainSerializer
 
     def get_queryset(self):
@@ -146,3 +153,16 @@ class TrainViewSet(viewsets.ModelViewSet):
         if self.action in ("list", "retrieve"):
             queryset = queryset.select_related("train_type")
         return queryset
+
+    @action(
+        methods=["POST"],
+        detail=True,
+        url_path="upload-image",
+    )
+    def upload_image(self, request, pk):
+        train = Train.objects.get(pk=pk)
+        serializer = self.get_serializer(train, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
