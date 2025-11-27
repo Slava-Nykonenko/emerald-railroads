@@ -17,6 +17,7 @@ class TicketInline(admin.TabularInline):
     model = Ticket
     extra = 1
 
+
 admin.site.register(Station)
 admin.site.register(TrainType)
 admin.site.register(Crew)

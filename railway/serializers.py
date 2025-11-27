@@ -68,14 +68,21 @@ class TrainListSerializer(TrainSerializer):
     )
 
 
+class TrainImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Train
+        fields = ("id", "image")
+
+
 class TrainRetrieveSerializer(TrainSerializer):
     class Meta:
         model = Train
         fields = TrainSerializer.Meta.fields + (
             "cargo_num",
             "places_in_cargo",
-            # "image"
+            "image"
         )
+
 
 class TrainJourneySerializer(TrainSerializer):
     class Meta:
@@ -224,8 +231,8 @@ class StationRetrieveSerializer(StationListSerializer):
             .order_by("departure_time")
             .annotate(
                 available_tickets=(
-                        F("train__cargo_num") * F("train__places_in_cargo")
-                        - Count("tickets")
+                    F("train__cargo_num") * F("train__places_in_cargo")
+                    - Count("tickets")
                 )
             )
         )
