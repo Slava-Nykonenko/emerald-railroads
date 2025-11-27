@@ -18,11 +18,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from user.views import LoginUserView, ManageUserView
+from user.views import LoginUserView, ManageUserView, CreateUserView
 
 urlpatterns = [
     path("login/", LoginUserView.as_view(), name="token"),
+    path("create/", CreateUserView.as_view(), name="create"),
     path("me/", ManageUserView.as_view(), name="manage"),
 ]
 
 app_name = "user"
+
