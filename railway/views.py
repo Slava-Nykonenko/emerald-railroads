@@ -24,7 +24,8 @@ from railway.serializers import (
     TrainSerializer,
     TrainListSerializer,
     StationListSerializer,
-    StationRetrieveSerializer, TrainRetrieveSerializer
+    StationRetrieveSerializer,
+    TrainRetrieveSerializer
 )
 
 
