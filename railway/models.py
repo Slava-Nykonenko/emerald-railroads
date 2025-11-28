@@ -35,10 +35,8 @@ class Crew(models.Model):
 
 
 def train_image_path(instance: "Train", filename: str) -> pathlib.Path:
-    filename = (
-        f"{slugify(instance.name)}-{uuid4()}"
-        + pathlib.Path(filename).suffix
-    )
+    filename = (f"{slugify(instance.name)}-{uuid4()}"
+                + pathlib.Path(filename).suffix)
     return pathlib.Path("upload-image/trains/") / pathlib.Path(filename)
 
 
@@ -47,9 +45,7 @@ class Train(models.Model):
     cargo_num = models.IntegerField()
     places_in_cargo = models.IntegerField()
     train_type = models.ForeignKey(
-        TrainType,
-        on_delete=models.PROTECT,
-        related_name="trains"
+        TrainType, on_delete=models.PROTECT, related_name="trains"
     )
     image = models.ImageField(
         null=True,
@@ -63,25 +59,18 @@ class Train(models.Model):
 
 class Route(models.Model):
     source = models.ForeignKey(
-        Station,
-        on_delete=models.CASCADE,
-        related_name="outgoing_routes"
+        Station, on_delete=models.CASCADE, related_name="outgoing_routes"
     )
     destination = models.ForeignKey(
-        Station,
-        on_delete=models.CASCADE,
-        related_name="incoming_routes"
+        Station, on_delete=models.CASCADE, related_name="incoming_routes"
     )
     distance = models.IntegerField()
 
     class Meta:
-        indexes = [
-            models.Index(fields=["source", "destination"])
-        ]
+        indexes = [models.Index(fields=["source", "destination"])]
 
     def __str__(self):
-        return (f"{self.source.name} -> {self.destination.name} "
-                f"({self.distance} km)")
+        return f"{self.source.name} -> {self.destination.name}"
 
 
 class Order(models.Model):
@@ -123,9 +112,7 @@ class Ticket(models.Model):
     cargo = models.IntegerField()
     seat = models.IntegerField()
     journey = models.ForeignKey(
-        Journey,
-        on_delete=models.CASCADE,
-        related_name="tickets"
+        Journey, on_delete=models.CASCADE, related_name="tickets"
     )
     order = models.ForeignKey(
         Order,
@@ -141,11 +128,11 @@ class Ticket(models.Model):
 
     @staticmethod
     def validate_seat(
-            seat: int,
-            cargo: int,
-            places_in_cargo: int,
-            cargo_num: int,
-            error_to_raise
+        seat: int,
+        cargo: int,
+        places_in_cargo: int,
+        cargo_num: int,
+        error_to_raise
     ):
         if not (1 <= seat <= places_in_cargo):
             raise error_to_raise(
@@ -167,7 +154,7 @@ class Ticket(models.Model):
             self.cargo,
             self.journey.train.places_in_cargo,
             self.journey.train.cargo_num,
-            ValidationError
+            ValidationError,
         )
 
     def save(

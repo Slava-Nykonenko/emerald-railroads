@@ -1,8 +1,18 @@
 from datetime import datetime
+from typing import Type
 
-from django.db.models import F, Count
+from django.db.models import F, Count, QuerySet
+from django.http import (
+    HttpResponse,
+    HttpRequest
+)
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import (
+    extend_schema,
+    OpenApiParameter
+)
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import (
@@ -18,7 +28,10 @@ from railway.models import (
     Order,
     Train
 )
-from railway.pagination import OrdersAndJourneysPagination, ListsPagination
+from railway.pagination import (
+    OrdersAndJourneysPagination,
+    ListsPagination
+)
 from railway.serializers import (
     StationSerializer,
     JourneySerializer,
@@ -33,7 +46,7 @@ from railway.serializers import (
     StationListSerializer,
     StationRetrieveSerializer,
     TrainRetrieveSerializer,
-    TrainImageSerializer
+    TrainImageSerializer,
 )
 
 
@@ -43,7 +56,9 @@ class StationViewSet(viewsets.ModelViewSet):
     serializer_class = StationSerializer
     pagination_class = ListsPagination
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> Type[
+        StationListSerializer | StationRetrieveSerializer | StationSerializer
+    ]:
         if self.action == "list":
             return StationListSerializer
         elif self.action == "retrieve":
@@ -58,12 +73,9 @@ class JourneyViewSet(viewsets.ModelViewSet):
     permission_classes = (AllowAny,)
     pagination_class = OrdersAndJourneysPagination
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         queryset = self.queryset.select_related(
-            "train",
-            "route",
-            "route__destination",
-            "route__source"
+            "train", "route", "route__destination", "route__source"
         ).prefetch_related("crew")
         source = self.request.query_params.get("source", None)
         destination = self.request.query_params.get("destination", None)
@@ -78,9 +90,7 @@ class JourneyViewSet(viewsets.ModelViewSet):
         if self.action == "list":
             queryset = queryset.filter(departure_time__gte=datetime.now())
         if source:
-            queryset = queryset.filter(
-                route__source__name__icontains=source
-            )
+            queryset = queryset.filter(route__source__name__icontains=source)
         if destination:
             queryset = queryset.filter(
                 route__destination__name__icontains=destination
@@ -93,12 +103,42 @@ class JourneyViewSet(viewsets.ModelViewSet):
 
         return queryset.order_by("departure_time")
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> Type[
+        JourneyListSerializer | JourneyRetrieveSerializer | JourneySerializer
+    ]:
         if self.action == "list":
             return JourneyListSerializer
         elif self.action == "retrieve":
             return JourneyRetrieveSerializer
         return JourneySerializer
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "source",
+                type=OpenApiTypes.STR,
+                description="Filtering journeys by source "
+                            "(ex. '?source=Dublin')",
+                required=False,
+            ),
+            OpenApiParameter(
+                "destination",
+                type=OpenApiTypes.STR,
+                description="Filtering journeys by destination "
+                "(ex. '?destination=Kilkenny')",
+                required=False,
+            ),
+            OpenApiParameter(
+                "date",
+                type=OpenApiTypes.DATE,
+                description="Filtering journeys by date "
+                            "(ex. '?date=2025-11-28')",
+                required=False,
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 class RouteViewSet(viewsets.ModelViewSet):
@@ -106,13 +146,15 @@ class RouteViewSet(viewsets.ModelViewSet):
     serializer_class = RouteSerializer
     pagination_class = ListsPagination
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         queryset = self.queryset
         if self.action in ("list", "retrieve"):
             queryset = queryset.select_related("source", "destination")
         return queryset
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> Type[
+        RouteListSerializer | RouteSerializer
+    ]:
         if self.action in ("list", "retrieve"):
             return RouteListSerializer
         return RouteSerializer
@@ -124,23 +166,27 @@ class OrderViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
     pagination_class = OrdersAndJourneysPagination
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         queryset = self.queryset.filter(user=self.request.user)
         if self.action in ("list", "retrieve"):
             queryset = queryset.prefetch_related(
                 "tickets",
                 "tickets__journey",
                 "tickets__journey__route__source",
-                "tickets__journey__route__destination"
+                "tickets__journey__route__destination",
             )
         return queryset
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> Type[
+        OrderListSerializer | OrderSerializer
+    ]:
         if self.action in ("list", "retrieve"):
             return OrderListSerializer
         return OrderSerializer
 
-    def perform_create(self, serializer):
+    def perform_create(
+        self, serializer: Type[OrderSerializer | OrderListSerializer]
+    ) -> None:
         serializer.save(user=self.request.user)
 
 
@@ -148,7 +194,14 @@ class TrainViewSet(viewsets.ModelViewSet):
     queryset = Train.objects.all()
     serializer_class = TrainSerializer
 
-    def get_serializer_class(self):
+    def get_serializer_class(
+        self,
+    ) -> Type[
+        TrainListSerializer
+        | TrainRetrieveSerializer
+        | TrainSerializer
+        | TrainImageSerializer
+    ]:
         if self.action == "list":
             return TrainListSerializer
         elif self.action == "retrieve":
@@ -157,7 +210,7 @@ class TrainViewSet(viewsets.ModelViewSet):
             return TrainImageSerializer
         return TrainSerializer
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         queryset = self.queryset
         if self.action in ("list", "retrieve"):
             queryset = queryset.select_related("train_type")
@@ -168,7 +221,7 @@ class TrainViewSet(viewsets.ModelViewSet):
         detail=True,
         url_path="upload-image",
     )
-    def upload_image(self, request, pk):
+    def upload_image(self, request: HttpRequest, pk: int) -> HttpResponse:
         train = Train.objects.get(pk=pk)
         serializer = self.get_serializer(train, data=request.data)
         if serializer.is_valid():

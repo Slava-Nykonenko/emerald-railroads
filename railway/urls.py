@@ -23,7 +23,7 @@ from railway.views import (
     JourneyViewSet,
     RouteViewSet,
     OrderViewSet,
-    TrainViewSet
+    TrainViewSet,
 )
 
 router = DefaultRouter()

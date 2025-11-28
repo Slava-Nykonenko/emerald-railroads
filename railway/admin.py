@@ -8,7 +8,7 @@ from railway.models import (
     Route,
     Order,
     Journey,
-    Ticket
+    Ticket,
 )
 
 

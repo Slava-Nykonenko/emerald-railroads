@@ -2,6 +2,7 @@ from datetime import datetime
 
 from django.db import transaction
 from django.db.models import Count, F
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from railway.models import (
@@ -64,7 +65,9 @@ class TrainSerializer(serializers.ModelSerializer):
 
 class TrainListSerializer(TrainSerializer):
     train_type = serializers.SlugRelatedField(
-        many=False, read_only=True, slug_field="name"
+        many=False,
+        read_only=True,
+        slug_field="name"
     )
 
 
@@ -78,9 +81,7 @@ class TrainRetrieveSerializer(TrainSerializer):
     class Meta:
         model = Train
         fields = TrainSerializer.Meta.fields + (
-            "cargo_num",
-            "places_in_cargo",
-            "image"
+            "cargo_num", "places_in_cargo", "image"
         )
 
 
@@ -112,7 +113,9 @@ class JourneySerializer(serializers.ModelSerializer):
 class JourneyListSerializer(serializers.ModelSerializer):
     route = serializers.StringRelatedField(many=False, read_only=False)
     train = serializers.SlugRelatedField(
-        many=False, read_only=True, slug_field="name"
+        many=False,
+        read_only=True,
+        slug_field="name"
     )
     available_tickets = serializers.IntegerField()
 
@@ -124,7 +127,7 @@ class JourneyListSerializer(serializers.ModelSerializer):
             "train",
             "departure_time",
             "arrival_time",
-            "available_tickets"
+            "available_tickets",
         )
 
 
@@ -145,7 +148,7 @@ class TicketSerializer(serializers.ModelSerializer):
             attrs["cargo"],
             attrs["journey"].train.places_in_cargo,
             attrs["journey"].train.cargo_num,
-            serializers.ValidationError
+            serializers.ValidationError,
         )
         return data
 
@@ -191,19 +194,11 @@ class JourneyOutStationSerializer(JourneySerializer):
 
     class Meta:
         model = Journey
-        fields = (
-            "id",
-            "destination",
-            "departure_time",
-            "available_tickets"
-        )
+        fields = ("id", "destination", "departure_time", "available_tickets")
 
 
 class JourneyInStationSerializer(JourneySerializer):
-    source = serializers.CharField(
-        read_only=True,
-        source="route.source.name"
-    )
+    source = serializers.CharField(read_only=True, source="route.source.name")
     available_tickets = serializers.IntegerField()
 
     class Meta:
@@ -218,16 +213,18 @@ class StationRetrieveSerializer(StationListSerializer):
     class Meta:
         model = Station
         fields = StationSerializer.Meta.fields + (
-            "outgoing_journeys", "incoming_journeys"
+            "outgoing_journeys",
+            "incoming_journeys",
         )
 
     @staticmethod
+    @extend_schema_field(JourneyOutStationSerializer(many=True))
     def get_outgoing_journeys(obj):
         journeys = (
             Journey.objects.filter(
-                arrival_time__gte=datetime.now(),
-                route__source__name=obj
-            ).select_related("route", "route__destination")
+                arrival_time__gte=datetime.now(), route__source__name=obj
+            )
+            .select_related("route", "route__destination")
             .order_by("departure_time")
             .annotate(
                 available_tickets=(
@@ -239,12 +236,14 @@ class StationRetrieveSerializer(StationListSerializer):
         return JourneyOutStationSerializer(journeys, many=True).data
 
     @staticmethod
+    @extend_schema_field(JourneyInStationSerializer(many=True))
     def get_incoming_journeys(obj):
         journeys = (
             Journey.objects.filter(
                 departure_time__gte=datetime.now(),
                 route__destination__name=obj
-            ).select_related("route", "route__source")
+            )
+            .select_related("route", "route__source")
             .order_by("arrival_time")
             .annotate(
                 available_tickets=(
