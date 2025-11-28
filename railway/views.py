@@ -5,7 +5,10 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import (
+    IsAuthenticated,
+    AllowAny
+)
 from rest_framework.response import Response
 
 from railway.models import (
@@ -15,6 +18,7 @@ from railway.models import (
     Order,
     Train
 )
+from railway.pagination import OrdersAndJourneysPagination, ListsPagination
 from railway.serializers import (
     StationSerializer,
     JourneySerializer,
@@ -37,6 +41,7 @@ from railway.serializers import (
 class StationViewSet(viewsets.ModelViewSet):
     queryset = Station.objects.all()
     serializer_class = StationSerializer
+    pagination_class = ListsPagination
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -50,6 +55,8 @@ class JourneyViewSet(viewsets.ModelViewSet):
     queryset = Journey.objects.all()
     serializer_class = JourneySerializer
     ordering_fields = ("departure_time",)
+    permission_classes = (AllowAny,)
+    pagination_class = OrdersAndJourneysPagination
 
     def get_queryset(self):
         queryset = self.queryset.select_related(
@@ -97,6 +104,7 @@ class JourneyViewSet(viewsets.ModelViewSet):
 class RouteViewSet(viewsets.ModelViewSet):
     queryset = Route.objects.all()
     serializer_class = RouteSerializer
+    pagination_class = ListsPagination
 
     def get_queryset(self):
         queryset = self.queryset
@@ -114,6 +122,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permission_classes = (IsAuthenticated,)
+    pagination_class = OrdersAndJourneysPagination
 
     def get_queryset(self):
         queryset = self.queryset.filter(user=self.request.user)
