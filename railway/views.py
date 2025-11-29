@@ -17,7 +17,6 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import (
     IsAuthenticated,
-    AllowAny,
     IsAdminUser
 )
 from rest_framework.response import Response
@@ -77,7 +76,6 @@ class JourneyViewSet(viewsets.ModelViewSet):
     queryset = Journey.objects.all()
     serializer_class = JourneySerializer
     ordering_fields = ("departure_time",)
-    permission_classes = (AllowAny,)
     pagination_class = OrdersAndJourneysPagination
 
     def get_queryset(self) -> QuerySet:
@@ -194,7 +192,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         return OrderSerializer
 
     def perform_create(
-        self, serializer: Type[OrderSerializer | OrderListSerializer]
+        self,
+        serializer: Type[OrderSerializer | OrderListSerializer]
     ) -> None:
         serializer.save(user=self.request.user)
 

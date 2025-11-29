@@ -140,7 +140,7 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication"
     ],
     "DEFAULT_PERMISSION_CLASSES": [
-        "railway.permissions.IsAuthenticatedReadOnlyAdminAllPermission",
+        "railway.permissions.AllowAnyListOnlyUserReadOnlyAdminAll",
     ],
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
