@@ -17,7 +17,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import (
     IsAuthenticated,
-    AllowAny, IsAdminUser
+    AllowAny,
+    IsAdminUser
 )
 from rest_framework.response import Response
 
@@ -26,7 +27,9 @@ from railway.models import (
     Journey,
     Route,
     Order,
-    Train, Crew, TrainType
+    Train,
+    Crew,
+    TrainType
 )
 from railway.pagination import (
     OrdersAndJourneysPagination,

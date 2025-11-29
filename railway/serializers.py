@@ -12,7 +12,8 @@ from railway.models import (
     Crew,
     Train,
     Order,
-    Ticket, TrainType
+    Ticket,
+    TrainType
 )
 
 

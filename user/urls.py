@@ -16,11 +16,27 @@ Including another URLconf
 """
 
 from django.urls import path
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView
+)
 
-from user.views import LoginUserView, ManageUserView, CreateUserView
+from user.views import (
+    ManageUserView,
+    CreateUserView
+)
 
 urlpatterns = [
-    path("login/", LoginUserView.as_view(), name="token"),
+    path(
+        "token/",
+        TokenObtainPairView.as_view(),
+        name="token_obtain_pair"
+    ),
+    path(
+        "token/refresh/",
+        TokenRefreshView.as_view(),
+        name="token_refresh"
+    ),
     path("create/", CreateUserView.as_view(), name="create"),
     path("me/", ManageUserView.as_view(), name="manage"),
 ]
