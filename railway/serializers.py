@@ -60,7 +60,7 @@ class CrewJourneySerializer(CrewSerializer):
 class TrainSerializer(serializers.ModelSerializer):
     class Meta:
         model = Train
-        fields = ("id", "name", "train_type")
+        fields = ("id", "name", "train_type", "cargo_num", "places_in_cargo")
 
 
 class TrainListSerializer(TrainSerializer):
@@ -80,9 +80,7 @@ class TrainImageSerializer(serializers.ModelSerializer):
 class TrainRetrieveSerializer(TrainSerializer):
     class Meta:
         model = Train
-        fields = TrainSerializer.Meta.fields + (
-            "cargo_num", "places_in_cargo", "image"
-        )
+        fields = TrainSerializer.Meta.fields + ("image",)
 
 
 class TrainJourneySerializer(TrainSerializer):
@@ -109,6 +107,13 @@ class JourneySerializer(serializers.ModelSerializer):
             "crew"
         )
 
+
+class JourneyUpcomingSerializer(JourneySerializer):
+    available_tickets = serializers.IntegerField()
+
+    class Meta:
+        model = Journey
+        fields = ("id", "departure_time", "arrival_time", "available_tickets")
 
 class JourneyListSerializer(serializers.ModelSerializer):
     route = serializers.StringRelatedField(many=False, read_only=False)
@@ -138,6 +143,30 @@ class JourneyRetrieveSerializer(JourneyListSerializer):
     class Meta:
         model = Journey
         fields = JourneyListSerializer.Meta.fields + ("crew",)
+
+
+class RouteRetrieveSerializer(RouteSerializer):
+    upcoming_journeys = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Route
+        fields = RouteListSerializer.Meta.fields + ("upcoming_journeys",)
+
+    def get_upcoming_journeys(self, obj):
+        journeys = (
+            Journey.objects.filter(
+                departure_time__gte=datetime.now(),
+                route_id=obj.id
+            ).order_by("departure_time")
+            .select_related("train")
+            .annotate(
+                available_tickets=(
+                    F("train__cargo_num") * F("train__places_in_cargo")
+                    - Count("tickets")
+                )
+            )
+        )
+        return JourneyUpcomingSerializer(journeys, many=True).data
 
 
 class TicketSerializer(serializers.ModelSerializer):

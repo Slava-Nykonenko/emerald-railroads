@@ -47,6 +47,7 @@ from railway.serializers import (
     StationRetrieveSerializer,
     TrainRetrieveSerializer,
     TrainImageSerializer,
+    RouteRetrieveSerializer,
 )
 
 
@@ -153,10 +154,12 @@ class RouteViewSet(viewsets.ModelViewSet):
         return queryset
 
     def get_serializer_class(self) -> Type[
-        RouteListSerializer | RouteSerializer
+        RouteListSerializer | RouteSerializer | RouteRetrieveSerializer
     ]:
-        if self.action in ("list", "retrieve"):
+        if self.action == "list":
             return RouteListSerializer
+        elif self.action == "retrieve":
+            return RouteRetrieveSerializer
         return RouteSerializer
 
 
