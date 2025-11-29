@@ -17,7 +17,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import (
     IsAuthenticated,
-    AllowAny
+    AllowAny, IsAdminUser
 )
 from rest_framework.response import Response
 
@@ -26,7 +26,7 @@ from railway.models import (
     Journey,
     Route,
     Order,
-    Train
+    Train, Crew, TrainType
 )
 from railway.pagination import (
     OrdersAndJourneysPagination,
@@ -48,6 +48,9 @@ from railway.serializers import (
     TrainRetrieveSerializer,
     TrainImageSerializer,
     RouteRetrieveSerializer,
+    CrewSerializer,
+    TrainTypeSerializer,
+    TrainTypeRetrieveSerializer,
 )
 
 
@@ -231,3 +234,22 @@ class TrainViewSet(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CrewViewSet(viewsets.ModelViewSet):
+    queryset = Crew.objects.all()
+    serializer_class = CrewSerializer
+    permission_classes = (IsAdminUser,)
+    pagination_class = ListsPagination
+
+
+class TrainTypeViewSet(viewsets.ModelViewSet):
+    queryset = TrainType.objects.all()
+    serializer_class = TrainTypeSerializer
+    permission_classes = (IsAdminUser,)
+    pagination_class = ListsPagination
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return TrainTypeRetrieveSerializer
+        return TrainTypeSerializer

@@ -24,10 +24,14 @@ from railway.views import (
     RouteViewSet,
     OrderViewSet,
     TrainViewSet,
+    CrewViewSet,
+    TrainTypeViewSet,
 )
 
 router = DefaultRouter()
 router.register("stations", StationViewSet)
+router.register("crew", CrewViewSet)
+router.register("train_types", TrainTypeViewSet)
 router.register("trains", TrainViewSet)
 router.register("routes", RouteViewSet)
 router.register("journeys", JourneyViewSet)

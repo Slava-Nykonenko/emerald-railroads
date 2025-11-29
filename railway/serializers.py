@@ -12,7 +12,7 @@ from railway.models import (
     Crew,
     Train,
     Order,
-    Ticket
+    Ticket, TrainType
 )
 
 
@@ -152,6 +152,8 @@ class RouteRetrieveSerializer(RouteSerializer):
         model = Route
         fields = RouteListSerializer.Meta.fields + ("upcoming_journeys",)
 
+    @staticmethod
+    @extend_schema_field(JourneyUpcomingSerializer(many=True))
     def get_upcoming_journeys(self, obj):
         journeys = (
             Journey.objects.filter(
@@ -282,3 +284,21 @@ class StationRetrieveSerializer(StationListSerializer):
             )
         )
         return JourneyInStationSerializer(journeys, many=True).data
+
+
+class TrainTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TrainType
+        fields = ("id", "name")
+
+
+class TrainTypeRetrieveSerializer(TrainTypeSerializer):
+    trains = serializers.SlugRelatedField(
+        many=True,
+        read_only=True,
+        slug_field="name",
+    )
+
+    class Meta:
+        model = TrainType
+        fields = TrainTypeSerializer.Meta.fields + ("trains",)
