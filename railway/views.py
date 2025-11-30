@@ -93,7 +93,7 @@ class JourneyViewSet(viewsets.ModelViewSet):
                 )
             )
         if self.action == "list":
-            queryset = queryset.filter(departure_time__gte=datetime.now())
+            queryset = queryset.filter(departure_time__gte=timezone.now())
         if source:
             queryset = queryset.filter(route__source__name__icontains=source)
         if destination:

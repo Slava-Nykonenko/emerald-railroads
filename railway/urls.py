@@ -37,8 +37,8 @@ router.register("routes", RouteViewSet)
 router.register("journeys", JourneyViewSet)
 router.register("orders", OrderViewSet)
 
+app_name = "railway"
+
 urlpatterns = [
     path("", include(router.urls)),
 ]
-
-app_name = "railway"
