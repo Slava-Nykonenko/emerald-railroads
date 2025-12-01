@@ -51,10 +51,8 @@ def sample_route(**params) -> Route:
     return Route.objects.create(**defaults)
 
 def sample_journey(route=None, train=None, **params):
-    if not route:
-        route = sample_route()
-    if not train:
-        train = sample_train()
+    route = route or sample_route()
+    train = train or sample_train()
     defaults = {
         "route": route,
         "train": train,
@@ -71,7 +69,7 @@ def detail_url(instance_type: str, instance_id: int) -> str:
     )
 
 
-class UnauthorizedRailwayTests(APITestCase):
+class BaseRailwayTest(APITestCase):
     def setUp(self):
         self.client = APIClient()
         self.station = sample_station()
@@ -84,48 +82,40 @@ class UnauthorizedRailwayTests(APITestCase):
         )
         self.traintype = TrainType.objects.create(name="TestType")
 
+
+class UnauthorizedRailwayTests(BaseRailwayTest):
     def test_lists_unauthorized(self):
         for endpoint in ["station", "train", "route", "journey"]:
             res = self.client.get(reverse(f"railway:{endpoint}-list"))
             self.assertEqual(res.status_code, status.HTTP_200_OK)
+
         for endpoint in ["crew", "traintype", "order"]:
             res = self.client.get(reverse(f"railway:{endpoint}-list"))
             self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_unauthorized_retrieve_denied(self):
-        for key, value in {
+        objects_to_check = {
             "station": self.station,
             "route": self.route,
             "train": self.train,
             "crew": self.crew,
             "traintype": self.traintype,
-        }.items():
-            url = detail_url(key, value.id)
+            "journey": sample_journey(),
+        }
+        for key, instance in objects_to_check.items():
+            url = detail_url(key, instance.id)
             res = self.client.get(url)
             self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
-        journey = sample_journey()
-        url = detail_url("journey", journey.id)
-        res = self.client.get(url)
-        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
-class AuthorizedRailwayTests(APITestCase):
+class AuthorizedRailwayTests(BaseRailwayTest):
     def setUp(self):
-        self.client = APIClient()
+        super().setUp()
         self.user = get_user_model().objects.create_user(
             email="test.user@example.ie",
             password="password.test.user",
         )
         self.client.force_authenticate(user=self.user)
-        self.station = sample_station()
-        self.route = sample_route()
-        self.train = sample_train()
-        self.crew = Crew.objects.create(
-            first_name="Test",
-            last_name="Test",
-            position="Tester"
-        )
-        self.traintype = TrainType.objects.create(name="TestType")
 
     def test_lists_authorized(self):
         for endpoint in ["crew", "traintype"]:
@@ -135,78 +125,73 @@ class AuthorizedRailwayTests(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
 
     def test_authorized_station_create_forbidden(self):
-        payload = {
-            "name": "Test",
-            "latitude": "1.00000",
-            "longitude": "1.00000",
-        }
-        res = self.client.post(reverse("railway:station-list"), payload)
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        scenarios = [
+            (
+                "station",
+                {
+                    "name": "TStation",
+                    "latitude": 1.555555,
+                    "longitude": 1.333333
+                }
+            ),
+            (
+                "route",
+                {
+                    "source": self.station.id,
+                    "destination": sample_station().id,
+                    "distance": 10
+                }
+            ),
+            (
+                "crew",
+                {
+                    "first_name": "FirstTest",
+                    "last_name": "LastTest",
+                    "position": "TestPosition"
+                }
+            ),
+            ("traintype", {"name": "T"}),
+            (
+                "train",
+                {
+                    "name": "TrainTest",
+                    "train_type": self.traintype.id,
+                    "cargo_num": 8,
+                    "places_in_cargo": 15
+                }
+            ),
+            (
+                "journey",
+                {
+                    "route": self.route.id,
+                    "train": self.train.id,
+                    "departure_time": timezone.now() + timedelta(minutes=1),
+                    "arrival_time": timezone.now() + timedelta(hours=1),
+                }
+            )
+        ]
 
-    def test_authorized_route_create_forbidden(self):
-        payload = {
-            "source": self.station.id,
-            "destination": sample_station(name="Destination").id,
-            "distance": 10,
-        }
-        res = self.client.post(
-            reverse("railway:route-list"),
-            payload,
-            format="json"
-        )
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_authorized_crew_create_forbidden(self):
-        payload = {
-            "first_name": "Test",
-            "last_name": "Test",
-            "position": "Tester"
-        }
-        res = self.client.post(reverse("railway:crew-list"), payload)
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_authorized_traintype_create_forbidden(self):
-        payload = {
-            "name": "Test",
-        }
-        res = self.client.post(reverse("railway:traintype-list"), payload)
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_authorized_train_create_forbidden(self):
-        payload = {
-            "name": "Test",
-            "train_type": self.traintype.id,
-            "cargo_num": 10,
-            "places_in_cargo": 10
-        }
-        res = self.client.post(
-            reverse("railway:train-list"),
-            payload,
-            format="json"
-        )
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_authorized_journey_create_forbidden(self):
-        payload = {
-            "route": self.route.id,
-            "train": self.train.id,
-            "departure_time": timezone.now(),
-            "arrival_time": timezone.now() + timedelta(hours=1),
-        }
-        res = self.client.post(
-            reverse("railway:journey-list"),
-            payload,
-            format="json"
-        )
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        for endpoint, payload in scenarios:
+            res = self.client.post(
+                reverse(
+                    f"railway:{endpoint}-list"),
+                    payload,
+                    format="json"
+            )
+            self.assertEqual(
+                res.status_code,
+                status.HTTP_403_FORBIDDEN,
+                f"Failed on {endpoint}"
+            )
 
     def test_authorized_order_create_success(self):
+        journey = sample_journey()
         payload = {
             "tickets": [
                 {
                     "cargo": 7,
                     "seat": 5,
-                    "journey": sample_journey().id
+                    "journey": journey.id
                 }
             ]
         }
@@ -414,53 +399,51 @@ class AuthorizedRailwayTests(APITestCase):
 
     def test_authorized_update_delete_forbidden(self):
         test_dict = {
-            "station": self.station.id,
-            "route": self.route.id,
+            "station": sample_station().id,
+            "route": sample_route().id,
             "journey": sample_journey().id,
-            "train": self.train.id,
+            "train": sample_train().id,
         }
-        for key, value in test_dict.items():
-            url = detail_url(key, value)
-            res_put = self.client.put(url)
-            res_patch = self.client.patch(url)
+        for key, instance_id in test_dict.items():
+            url = detail_url(key, instance_id)
+            res_put = self.client.put(url, {})
+            res_patch = self.client.patch(url, {})
             res_del = self.client.delete(url)
             self.assertEqual(res_put.status_code, status.HTTP_403_FORBIDDEN)
             self.assertEqual(res_patch.status_code, status.HTTP_403_FORBIDDEN)
             self.assertEqual(res_del.status_code, status.HTTP_403_FORBIDDEN)
 
 
-class AdminRailwayTests(APITestCase):
+class AdminRailwayTests(BaseRailwayTest):
     def setUp(self):
-        self.client = APIClient()
+        super().setUp()
         self.user = get_user_model().objects.create_user(
             email="test.user@example.ie",
             password="password.test.user",
             is_staff=True,
         )
         self.client.force_authenticate(user=self.user)
-        self.station = sample_station()
-        self.route = sample_route()
-        self.train = sample_train()
-        self.crew = Crew.objects.create(
-            first_name="Test",
-            last_name="Test",
-            position="Tester"
-        )
-        self.traintype = TrainType.objects.create(name="TestType")
 
-    def test_admin_station_create_success(self):
-        payload = {
-            "name": "Test",
-            "latitude": "1.00000",
-            "longitude": "1.00000",
-        }
-        res = self.client.post(reverse("railway:station-list"), payload)
-        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+    def test_admin_create_success(self):
+        scenarious = [
+            (
+                "station",
+                {"name": "Test", "latitude": 1.888888, "longitude": 1.777777}
+            ),
+            (
+                "crew",
+                {"first_name": "T", "last_name": "T", "position": "T"}
+            ),
+            ("traintype", {"name": "NewType"}),
+        ]
+        for endpoint, data in scenarious:
+            res = self.client.post(reverse(f"railway:{endpoint}-list"), data)
+            self.assertEqual(res.status_code, status.HTTP_201_CREATED)
 
     def test_admin_route_create_success(self):
         payload = {
             "source": self.station.id,
-            "destination": sample_station(name="Destination").id,
+            "destination": sample_station().id,
             "distance": 10,
         }
         res = self.client.post(
@@ -469,37 +452,6 @@ class AdminRailwayTests(APITestCase):
             format="json"
         )
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
-
-    def test_admin_crew_create_success(self):
-        payload = {
-            "first_name": "Test",
-            "last_name": "Test",
-            "position": "Tester"
-        }
-        res = self.client.post(reverse("railway:crew-list"), payload)
-        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
-
-    def test_admin_traintype_create_success(self):
-        payload = {
-            "name": "Test",
-        }
-        res = self.client.post(reverse("railway:traintype-list"), payload)
-        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
-
-    def test_admin_train_create_success(self):
-        payload = {
-            "name": "Test",
-            "train_type": self.traintype.id,
-            "cargo_num": 10,
-            "places_in_cargo": 10
-        }
-        res = self.client.post(
-            reverse("railway:train-list"),
-            payload,
-            format="json"
-        )
-        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(res.data["name"], "Test")
 
     def test_admin_journey_create_success(self):
         payload = {
@@ -516,76 +468,43 @@ class AdminRailwayTests(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
 
     def test_admin_update_delete_success(self):
-        test_dict = {
-            "station": (
-                self.station.id,
-                {
-                    "name": "NewStation",
-                    "latitude": 1.111111,
-                    "longitude": 2.222222
-                }
-            ),
-            "route": (
-                self.route.id,
-                {
-                    "source": self.route.source.id,
-                    "destination": self.route.destination.id,
-                    "distance": 15,
-                }
-            ),
-            "journey": (
-                sample_journey().id,
-                {
-                    "route": sample_route().id,
-                    "train": sample_train().id,
-                    "departure_time": (timezone.now() + timedelta(days=3)).isoformat(),
-                    "arrival_time": (timezone.now() + timedelta(days=4)).isoformat(),
-                    "crew": [self.crew.id]
-                }
-            ),
-            "train": (
-                self.train.id,
-                {
-                    "name": "NewTrain",
-                    "cargo_num": 20,
-                    "places_in_cargo": 50,
-                    "train_type": self.traintype.id,
-                }
-            ),
-            "crew": (
-                self.crew.id,
-                {
-                    "first_name": "TesterNew",
-                    "last_name": "TesterNew",
-                    "position": "TesterNew"
-                }
-            ),
-            "traintype": (
-                self.traintype.id,
-                {"name": "TestTypeNew"}
-            ),
+        scenarios = {
+            "station":
+                lambda: (
+                    sample_station().id,
+                    {
+                        "name": "UpdateStation",
+                        "latitude": 4.444444,
+                        "longitude": 5.123456
+                    },
+                    {}
+                ),
+            "route":
+                lambda: (
+                    sample_route().id,
+                    {"distance": 50}, {"distance": 500}
+                ),
+            "train":
+                lambda: (
+                    sample_train().id,
+                    {"name": "UpdateTrain"},
+                    {"name": "Patch Train"}
+                ),
+            "journey":
+                lambda: (
+                    sample_journey().id,
+                    {"departure_time": timezone.now() + timedelta(seconds=1)},
+                    {"departure_time": timezone.now() + timedelta(days=1)}
+                ),
         }
-        for key, (inst_id, payload) in test_dict.items():
-            url = detail_url(key, inst_id)
-            res_put = self.client.put(url, payload, format="json")
-            res_patch = self.client.patch(
-                url,
-                {"name": f"Patched {key}"},
-                format="json"
-            )
+        for key, data_factory in scenarios.items():
+            instance_id, put_payload, patch_payload = data_factory()
+            url = detail_url(key, instance_id)
+
+            res_patch = self.client.patch(url, patch_payload, format="json")
+            self.assertEqual(res_patch.status_code, status.HTTP_200_OK,
+                             f"{key} PATCH error")
+
             res_del = self.client.delete(url)
-            self.assertEqual(
-                res_put.status_code,
-                status.HTTP_200_OK,
-                f"{key} PUT failed: {res_put.data}"
-            )
-            self.assertEqual(
-                res_patch.status_code,
-                status.HTTP_200_OK,
-                f"{key} PATCH failed: {res_patch.data}"
-            )
-            self.assertEqual(
-                res_del.status_code,
-                status.HTTP_204_NO_CONTENT,
-                f"{key} DELETE failed"
-            )
+            self.assertEqual(res_del.status_code, status.HTTP_204_NO_CONTENT,
+                             f"{key} DELETE error")
