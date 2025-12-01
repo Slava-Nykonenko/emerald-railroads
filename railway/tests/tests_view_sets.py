@@ -283,9 +283,42 @@ class AuthorizedRailwayTests(APITestCase):
         self.assertIn(journey_2.id, ids)
         self.assertNotIn(journey_3.id, ids)
 
-"""
-    Implement:
-    1. For an ordinary user:
-        - Simple user shouldn't see other users' orders
-    2. Admin CRUD for all endpoints (don't forget test upload image)
-"""
+    def test_authorized_only_users_orders(self):
+        user_1 = get_user_model().objects.create_user(
+            email="test_1.user@example.ie",
+            password="password.test_1.user",
+        )
+        client_1 = APIClient()
+        client_1.force_authenticate(user=user_1)
+        payload_1 = {
+            "tickets": [
+                {
+                    "cargo": 3,
+                    "seat": 2,
+                    "journey": sample_journey().id
+                }
+            ]
+        }
+        payload_2 = {
+            "tickets": [
+                {
+                    "cargo": 3,
+                    "seat": 2,
+                    "journey": sample_journey().id
+                }
+            ]
+        }
+        res_1 = client_1.post(
+            reverse("railway:order-list"),
+            payload_1,
+            format="json"
+        )
+        res_2 = self.client.post(
+            reverse("railway:order-list"),
+            payload_2,
+            format="json"
+        )
+        self.assertEqual(res_1.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res_2.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(payload_1["tickets"], res_1.data["tickets"])
+        self.assertNotEqual(payload_2["tickets"], res_1.data["tickets"])
