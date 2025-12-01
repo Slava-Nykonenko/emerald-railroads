@@ -155,7 +155,7 @@ class RouteRetrieveSerializer(RouteSerializer):
 
     @staticmethod
     @extend_schema_field(JourneyUpcomingSerializer(many=True))
-    def get_upcoming_journeys(self, obj):
+    def get_upcoming_journeys(obj):
         journeys = (
             Journey.objects.filter(
                 departure_time__gte=datetime.now(),

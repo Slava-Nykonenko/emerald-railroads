@@ -25,8 +25,8 @@ from railway.serializers import JourneyListSerializer
 def sample_station(name="Station", **params) -> Station:
     defaults = {
         "name": f"{name}_{uuid4()}",
-        "latitude": "0.00000",
-        "longitude": "0.00000",
+        "latitude": "0.000000",
+        "longitude": "0.000000",
     }
     defaults.update(params)
     return Station.objects.create(**defaults)
@@ -58,7 +58,7 @@ def sample_journey(route=None, train=None, **params):
     defaults = {
         "route": route,
         "train": train,
-        "departure_time": timezone.now(),
+        "departure_time": timezone.now() + timedelta(minutes=1),
         "arrival_time": timezone.now() + timedelta(hours=1),
     }
     defaults.update(params)
@@ -218,11 +218,7 @@ class AuthorizedRailwayTests(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
 
     def test_journey_list(self):
-        in_an_hour = timezone.now() + timedelta(hours=1)
-        journey_1 = sample_journey(
-            departure_time=in_an_hour,
-            arrival_time=in_an_hour + timedelta(hours=2),
-        )
+        journey_1 = sample_journey()
         tomorrow = timezone.now() + timedelta(days=1)
         journey_2 = sample_journey(
             route=self.route,
@@ -335,6 +331,103 @@ class AuthorizedRailwayTests(APITestCase):
         self.assertEqual(payload_1["tickets"], res_1.data["tickets"])
         self.assertNotEqual(payload_2["tickets"], res_1.data["tickets"])
 
+    def test_authorized_retrieve_station(self):
+        url = detail_url("station", self.station.id)
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data["id"], self.station.id)
+        self.assertEqual(res.data["name"], self.station.name)
+        self.assertEqual(res.data["latitude"], self.station.latitude)
+        self.assertEqual(res.data["longitude"], self.station.longitude)
+
+    def test_authorized_retrieve_journey(self):
+        journey = sample_journey()
+        url = detail_url("journey", journey.id)
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(journey.id, res.data["id"])
+
+    def test_authorized_retrieve_route(self):
+        url = detail_url("route", self.route.id)
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.route.id, res.data["id"])
+
+    def test_authorized_retrieve_train(self):
+        url = detail_url("train", self.train.id)
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.train.id, res.data["id"])
+
+    def test_authorized_retrieve_station_route_out_in_journeys(self):
+        route_outgoing = sample_route(
+            source=self.station,
+        )
+        route_incoming = sample_route(
+            destination=self.station,
+        )
+        journey_outgoing = sample_journey(
+            route=route_outgoing,
+        )
+        journey_incoming = sample_journey(
+            route=route_incoming
+        )
+
+        # Check Station detail
+        # (must contain "outgoing_journeys" and "incoming_journeys" fields)
+        url_station = detail_url("station", self.station.id)
+        res_station = self.client.get(url_station)
+        self.assertIsInstance(res_station.data["outgoing_journeys"], list)
+        self.assertIsInstance(res_station.data["incoming_journeys"], list)
+        outgoing_ids = [journey["id"] for journey in
+                        res_station.data["outgoing_journeys"]]
+        self.assertIn(journey_outgoing.id, outgoing_ids)
+        incoming_ids = [journey["id"] for journey in
+                        res_station.data["incoming_journeys"]]
+        self.assertIn(journey_incoming.id, incoming_ids)
+
+        outgoing = next(
+            journey for journey in res_station.data["outgoing_journeys"]
+            if journey["id"] == journey_outgoing.id
+        )
+        self.assertEqual(
+            outgoing["destination"],
+            journey_outgoing.route.destination.name
+        )
+        incoming = next(
+            journey for journey in res_station.data["incoming_journeys"]
+            if journey["id"] == journey_incoming.id
+        )
+        self.assertEqual(
+            incoming["source"],
+            journey_incoming.route.source.name
+        )
+
+        # Check Route detail (must contain "incoming_journeys" field)
+        url_route = detail_url("route", route_outgoing.id)
+        res_route = self.client.get(url_route)
+        self.assertIsInstance(res_station.data["outgoing_journeys"], list)
+        self.assertIsInstance(res_station.data["incoming_journeys"], list)
+        upcoming_ids = [journey["id"] for journey in
+                        res_route.data["upcoming_journeys"]]
+        self.assertIn(journey_outgoing.id, upcoming_ids)
+
+    def test_authorized_update_delete_forbidden(self):
+        test_dict = {
+            "station": self.station.id,
+            "route": self.route.id,
+            "journey": sample_journey().id,
+            "train": self.train.id,
+        }
+        for key, value in test_dict.items():
+            url = detail_url(key, value)
+            res_put = self.client.put(url)
+            res_patch = self.client.patch(url)
+            res_del = self.client.delete(url)
+            self.assertEqual(res_put.status_code, status.HTTP_403_FORBIDDEN)
+            self.assertEqual(res_patch.status_code, status.HTTP_403_FORBIDDEN)
+            self.assertEqual(res_del.status_code, status.HTTP_403_FORBIDDEN)
+
 
 class AdminRailwayTests(APITestCase):
     def setUp(self):
@@ -406,12 +499,13 @@ class AdminRailwayTests(APITestCase):
             format="json"
         )
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res.data["name"], "Test")
 
     def test_admin_journey_create_success(self):
         payload = {
             "route": self.route.id,
             "train": self.train.id,
-            "departure_time": timezone.now(),
+            "departure_time": timezone.now() + timedelta(minutes=1),
             "arrival_time": timezone.now() + timedelta(hours=1),
         }
         res = self.client.post(
@@ -420,3 +514,78 @@ class AdminRailwayTests(APITestCase):
             format="json"
         )
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+    def test_admin_update_delete_success(self):
+        test_dict = {
+            "station": (
+                self.station.id,
+                {
+                    "name": "NewStation",
+                    "latitude": 1.111111,
+                    "longitude": 2.222222
+                }
+            ),
+            "route": (
+                self.route.id,
+                {
+                    "source": self.route.source.id,
+                    "destination": self.route.destination.id,
+                    "distance": 15,
+                }
+            ),
+            "journey": (
+                sample_journey().id,
+                {
+                    "route": sample_route().id,
+                    "train": sample_train().id,
+                    "departure_time": (timezone.now() + timedelta(days=3)).isoformat(),
+                    "arrival_time": (timezone.now() + timedelta(days=4)).isoformat(),
+                    "crew": [self.crew.id]
+                }
+            ),
+            "train": (
+                self.train.id,
+                {
+                    "name": "NewTrain",
+                    "cargo_num": 20,
+                    "places_in_cargo": 50,
+                    "train_type": self.traintype.id,
+                }
+            ),
+            "crew": (
+                self.crew.id,
+                {
+                    "first_name": "TesterNew",
+                    "last_name": "TesterNew",
+                    "position": "TesterNew"
+                }
+            ),
+            "traintype": (
+                self.traintype.id,
+                {"name": "TestTypeNew"}
+            ),
+        }
+        for key, (inst_id, payload) in test_dict.items():
+            url = detail_url(key, inst_id)
+            res_put = self.client.put(url, payload, format="json")
+            res_patch = self.client.patch(
+                url,
+                {"name": f"Patched {key}"},
+                format="json"
+            )
+            res_del = self.client.delete(url)
+            self.assertEqual(
+                res_put.status_code,
+                status.HTTP_200_OK,
+                f"{key} PUT failed: {res_put.data}"
+            )
+            self.assertEqual(
+                res_patch.status_code,
+                status.HTTP_200_OK,
+                f"{key} PATCH failed: {res_patch.data}"
+            )
+            self.assertEqual(
+                res_del.status_code,
+                status.HTTP_204_NO_CONTENT,
+                f"{key} DELETE failed"
+            )
