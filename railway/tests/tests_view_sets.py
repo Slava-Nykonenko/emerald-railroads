@@ -145,11 +145,15 @@ class AuthorizedRailwayTests(APITestCase):
 
     def test_authorized_route_create_forbidden(self):
         payload = {
-            "source": self.station,
-            "destination": sample_station(name="Destination"),
+            "source": self.station.id,
+            "destination": sample_station(name="Destination").id,
             "distance": 10,
         }
-        res = self.client.post(reverse("railway:route-list"), payload)
+        res = self.client.post(
+            reverse("railway:route-list"),
+            payload,
+            format="json"
+        )
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_authorized_crew_create_forbidden(self):
@@ -171,21 +175,29 @@ class AuthorizedRailwayTests(APITestCase):
     def test_authorized_train_create_forbidden(self):
         payload = {
             "name": "Test",
-            "train_type": self.traintype,
+            "train_type": self.traintype.id,
             "cargo_num": 10,
             "places_in_cargo": 10
         }
-        res = self.client.post(reverse("railway:train-list"), payload)
+        res = self.client.post(
+            reverse("railway:train-list"),
+            payload,
+            format="json"
+        )
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_authorized_journey_create_forbidden(self):
         payload = {
-            "route": self.route,
-            "train": self.train,
+            "route": self.route.id,
+            "train": self.train.id,
             "departure_time": timezone.now(),
             "arrival_time": timezone.now() + timedelta(hours=1),
         }
-        res = self.client.post(reverse("railway:journey-list"), payload)
+        res = self.client.post(
+            reverse("railway:journey-list"),
+            payload,
+            format="json"
+        )
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_authorized_order_create_success(self):
@@ -322,3 +334,89 @@ class AuthorizedRailwayTests(APITestCase):
         self.assertEqual(res_2.status_code, status.HTTP_201_CREATED)
         self.assertEqual(payload_1["tickets"], res_1.data["tickets"])
         self.assertNotEqual(payload_2["tickets"], res_1.data["tickets"])
+
+
+class AdminRailwayTests(APITestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = get_user_model().objects.create_user(
+            email="test.user@example.ie",
+            password="password.test.user",
+            is_staff=True,
+        )
+        self.client.force_authenticate(user=self.user)
+        self.station = sample_station()
+        self.route = sample_route()
+        self.train = sample_train()
+        self.crew = Crew.objects.create(
+            first_name="Test",
+            last_name="Test",
+            position="Tester"
+        )
+        self.traintype = TrainType.objects.create(name="TestType")
+
+    def test_admin_station_create_success(self):
+        payload = {
+            "name": "Test",
+            "latitude": "1.00000",
+            "longitude": "1.00000",
+        }
+        res = self.client.post(reverse("railway:station-list"), payload)
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+    def test_admin_route_create_success(self):
+        payload = {
+            "source": self.station.id,
+            "destination": sample_station(name="Destination").id,
+            "distance": 10,
+        }
+        res = self.client.post(
+            reverse("railway:route-list"),
+            payload,
+            format="json"
+        )
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+    def test_admin_crew_create_success(self):
+        payload = {
+            "first_name": "Test",
+            "last_name": "Test",
+            "position": "Tester"
+        }
+        res = self.client.post(reverse("railway:crew-list"), payload)
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+    def test_admin_traintype_create_success(self):
+        payload = {
+            "name": "Test",
+        }
+        res = self.client.post(reverse("railway:traintype-list"), payload)
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+    def test_admin_train_create_success(self):
+        payload = {
+            "name": "Test",
+            "train_type": self.traintype.id,
+            "cargo_num": 10,
+            "places_in_cargo": 10
+        }
+        res = self.client.post(
+            reverse("railway:train-list"),
+            payload,
+            format="json"
+        )
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+    def test_admin_journey_create_success(self):
+        payload = {
+            "route": self.route.id,
+            "train": self.train.id,
+            "departure_time": timezone.now(),
+            "arrival_time": timezone.now() + timedelta(hours=1),
+        }
+        res = self.client.post(
+            reverse("railway:journey-list"),
+            payload,
+            format="json"
+        )
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
