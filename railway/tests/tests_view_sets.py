@@ -19,7 +19,7 @@ from railway.models import (
     Route,
     Journey
 )
-from railway.serializers import JourneySerializer, JourneyListSerializer
+from railway.serializers import JourneyListSerializer
 
 
 def sample_station(name="Station", **params) -> Station:
@@ -188,7 +188,6 @@ class AuthorizedRailwayTests(APITestCase):
         res = self.client.post(reverse("railway:journey-list"), payload)
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
-
     def test_authorized_order_create_success(self):
         payload = {
             "tickets": [
@@ -204,7 +203,6 @@ class AuthorizedRailwayTests(APITestCase):
             payload,
             format="json"
         )
-
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
 
     def test_journey_list(self):
