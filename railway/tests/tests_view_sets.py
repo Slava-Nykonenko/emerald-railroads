@@ -316,8 +316,14 @@ class AuthorizedRailwayTests(BaseRailwayTest):
             payload_2,
             format="json"
         )
+        res_3 = self.client.post(
+            reverse("railway:order-list"),
+            payload_2,
+            format="json"
+        )
         self.assertEqual(res_1.status_code, status.HTTP_201_CREATED)
         self.assertEqual(res_2.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res_3.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(payload_1["tickets"], res_1.data["tickets"])
         self.assertNotEqual(payload_2["tickets"], res_1.data["tickets"])
 
