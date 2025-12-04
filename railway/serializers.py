@@ -52,12 +52,6 @@ class CrewSerializer(serializers.ModelSerializer):
         fields = ("id", "first_name", "last_name", "position")
 
 
-class CrewJourneySerializer(CrewSerializer):
-    class Meta:
-        model = Crew
-        fields = ("first_name", "last_name", "position")
-
-
 class TrainSerializer(serializers.ModelSerializer):
     class Meta:
         model = Train

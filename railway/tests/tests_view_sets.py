@@ -107,6 +107,11 @@ class UnauthorizedRailwayTests(BaseRailwayTest):
             res = self.client.get(url)
             self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_unauthorized_station_create_denied(self):
+        payload = {"name": "AnonTest", "latitude": 1, "longitude": 1}
+        res = self.client.post(reverse("railway:station-list"), payload)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
 
 class AuthorizedRailwayTests(BaseRailwayTest):
     def setUp(self):
