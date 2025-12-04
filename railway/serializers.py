@@ -110,6 +110,7 @@ class JourneyUpcomingSerializer(JourneySerializer):
         model = Journey
         fields = ("id", "departure_time", "arrival_time", "available_tickets")
 
+
 class JourneyListSerializer(serializers.ModelSerializer):
     route = serializers.StringRelatedField(many=False, read_only=False)
     train = serializers.SlugRelatedField(
