@@ -34,6 +34,7 @@ from railway.pagination import (
     OrdersAndJourneysPagination,
     ListsPagination
 )
+from railway.permissions import AllowAnyListOnlyUserReadOnlyAdminAll
 from railway.serializers import (
     StationSerializer,
     JourneySerializer,
@@ -61,6 +62,7 @@ class StationViewSet(viewsets.ModelViewSet):
     queryset = Station.objects.all()
     serializer_class = StationSerializer
     pagination_class = ListsPagination
+    permission_classes = (AllowAnyListOnlyUserReadOnlyAdminAll,)
 
     def get_serializer_class(self) -> Type[
         StationListSerializer | StationRetrieveSerializer | StationSerializer
@@ -77,6 +79,7 @@ class JourneyViewSet(viewsets.ModelViewSet):
     serializer_class = JourneySerializer
     ordering_fields = ("departure_time",)
     pagination_class = OrdersAndJourneysPagination
+    permission_classes = (AllowAnyListOnlyUserReadOnlyAdminAll,)
 
     def get_queryset(self) -> QuerySet:
         queryset = self.queryset.select_related(
@@ -150,6 +153,7 @@ class RouteViewSet(viewsets.ModelViewSet):
     queryset = Route.objects.all()
     serializer_class = RouteSerializer
     pagination_class = ListsPagination
+    permission_classes = (AllowAnyListOnlyUserReadOnlyAdminAll,)
 
     def get_queryset(self) -> QuerySet:
         queryset = self.queryset
@@ -201,6 +205,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 class TrainViewSet(viewsets.ModelViewSet):
     queryset = Train.objects.all()
     serializer_class = TrainSerializer
+    permission_classes = (AllowAnyListOnlyUserReadOnlyAdminAll,)
 
     def get_serializer_class(
         self,

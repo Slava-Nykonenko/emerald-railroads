@@ -73,6 +73,11 @@ class TrainImageSerializer(serializers.ModelSerializer):
 
 
 class TrainRetrieveSerializer(TrainSerializer):
+    train_type = serializers.SlugRelatedField(
+        many=False,
+        read_only=True,
+        slug_field="name"
+    )
     class Meta:
         model = Train
         fields = TrainSerializer.Meta.fields + ("image",)
