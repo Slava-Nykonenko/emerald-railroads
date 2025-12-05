@@ -1,4 +1,4 @@
-FROM 3.13.10-slim-trixie
+FROM python:3.13.10-slim-trixie
 LABEL authors="slava.nykon@gmail.com"
 
 ENV PYTHONUNBUFFERED 1
