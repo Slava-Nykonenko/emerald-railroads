@@ -43,9 +43,9 @@ Ensure you have the following installed on your system:
 ```shell
   venv\Scripts\activate
 ```
-#### For Mac:
+#### For Mac/Linux:
 ```shell
-  source venv/Scripts/activate
+  source venv/bin/activate
 ```
 ```shell
   pip install -r requirements.txt
@@ -65,6 +65,39 @@ Docker should be installed.
   docker-compose build
   docker-compose up
 ```
+#### DockerHub Image
+
+You can pull the prebuilt image directly from DockerHub:
+
+```shell
+  docker pull slavanykonenko/emerald-railroads-app:latest
+```
+### Demo Access
+
+For quick testing, you can use the following default user:
+- Email: ```user@example.ie```
+- Password: ```user-password```
+
+Use these credentials to obtain a JWT token via /api/user/token/ and explore the API endpoints in Swagger UI or Redoc.
+
+Example request:
+```
+POST /api/user/token/
+{
+  "email": "user@example.ie",
+  "password": "user-password"
+}
+```
+Response:
+```
+{
+  "access": "<access-token>",
+  "refresh": "<refresh-token>"
+}
+```
+To make authenticated requests, include the Access Token in the Authorization 
+header:
+> Authorization: Bearer <your-access-token>
 
 ### Initial Configuration
 
@@ -74,9 +107,6 @@ Docker should be installed.
 ```
 * Create a user with /api/user/create/ (optional)
 * Get token pair via /api/user/token/
-* To make authenticated requests, include the Access Token in the Authorization 
-header:
-> Authorization: Bearer <your-access-token>
 * To refresh an access token use /api/user/token/refresh/
 * To retrieve or update the authenticated user's profile go to /api/user/me/
 
@@ -98,12 +128,15 @@ optimizations, and security permissions.
 Run tests from the root directory using Django's test runner:
 
 ```shell
-  docker-compose exec web python manage.py test
+  docker-compose exec app python manage.py test
 ```
 ### Documentation and Schema
 
 This project uses DRF Spectacular to automatically generate an OpenAPI 3.0 
 (Swagger) schema.
+
+**Raw Schema:**  
+http://127.0.0.1:8000/api/schema/
 
 **Swagger UI:**<br>
 View the interactive API documentation at: 
